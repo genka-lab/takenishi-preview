@@ -30,6 +30,8 @@ body[data-mode] .hd{background:rgba(251,246,234,.86);backdrop-filter:blur(8px);-
 @keyframes bob{from{translate:0 0}to{translate:0 -6px}}
 .ch--sm{height:calc(var(--ch-h)*.78)}
 .ch--xs{height:calc(var(--ch-h)*.5)}
+.ch--md{height:calc(var(--ch-h)*.66)}
+.ch:has(.bubble.is-on){z-index:7}
 .ch__shadow{position:absolute;left:50%;bottom:-6px;width:60%;height:14px;border-radius:50%;background:rgba(0,0,0,.18);transform:translateX(-50%);filter:blur(4px)}
 .ch .bubble{position:absolute;z-index:6;left:50%;bottom:calc(100% + 10px);transform:translateX(-10%) scale(.6);transform-origin:bottom left;background:#fff;border-radius:18px;padding:9px 15px;font-family:var(--ff-head);font-weight:900;color:var(--dgreen);font-size:clamp(13px,1.6vw,18px);box-shadow:0 8px 20px rgba(0,0,0,.15);white-space:nowrap;opacity:0;filter:none}
 .ch .bubble::after{content:"";position:absolute;left:18px;bottom:-12px;border:8px solid transparent;border-top-color:#fff;border-left-color:#fff}
@@ -238,3 +240,19 @@ body[data-mode] .hd{background:rgba(251,246,234,.86);backdrop-filter:blur(8px);-
 .loader__bar i{display:block;height:100%;width:8%;background:linear-gradient(90deg,var(--green),var(--yellow));border-radius:99px;transition:width .3s}
 .greet-short{font-size:14px;color:var(--dgreen);margin-top:8px}
 .greet-short a{margin-left:8px;color:var(--red);font-weight:700}
+
+/* ---------- スマホ：キャラ配置の上書き ---------- */
+@media(max-width:959px){
+  #c3-koharu{--x:18%!important}#c3-sota{--x:46%!important}#c3-midori{--x:82%!important}
+  #c5-sota{--x:18%!important}#c5-koharu{--x:62%!important}
+  #c6-koharu{--x:18%!important}#c6-sota{--x:50%!important}#c6-midori{--x:84%!important}
+  #c7-koharu{--x:30%!important}#c7-haru{--x:78%!important}
+  #c9-koharu{--x:20%!important}#c9-sota{--x:48%!important}
+  #c10-koharu{--x:32%!important}#c10-sota{--x:66%!important}
+  #c2-koharu{--x:18%!important}#c2-sota{--x:50%!important}
+  .sc-6 .scene__open{min-height:0!important}
+  .sc-6 .scene__info{padding:12vh var(--gutter) 46vh!important;justify-content:flex-start!important}
+  .sc-6 .paper{max-width:100%}
+  .sc-6 .ch{bottom:9vh}
+  .sc-6 .prop{display:none}
+}

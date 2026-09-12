@@ -138,7 +138,7 @@
   /* ---- Scene6 主役（pin） ---- */
   if ($('.sc-6')) {
     const mode = document.body.dataset.mode;
-    const tl = gsap.timeline({ scrollTrigger: { trigger: '.sc-6 .scene__open', start: 'top top', end: () => '+=' + (sp() ? 100 : 120) + '%', pin: true, scrub: .5, anticipatePin: 1,
+    const tl = gsap.timeline({ scrollTrigger: sp() ? { trigger: '.sc-6', start: 'top 75%', end: 'bottom 70%', scrub: .5 } : { trigger: '.sc-6 .scene__open', start: 'top top', end: '+=120%', pin: true, scrub: .5, anticipatePin: 1,
       onUpdate: s => drive(s, { '#c6-midori': [[0, 'stand'], [.1, 'board']], '#c6-sota': [[0, 'stand'], [.62, 'cheer'], [.85, 'laugh']], '#c6-koharu': [[0, 'stand'], [.5, 'point'], [.8, 'jump']], '#b6': .8 }) } });
     tl.from('#c6-midori', { xPercent: 120, ease: 'none' }, 0);
     if (mode === 'aki') {
@@ -178,7 +178,7 @@
 
   /* ---- Scene9 街灯 ---- */
   if ($('.sc-9')) {
-    gsap.timeline({ scrollTrigger: { trigger: '.sc-9', start: 'top 70%', end: 'bottom 60%', scrub: .6, onUpdate: s => drive(s, { '#c9-koharu': [[0, 'walk'], [.45, 'sit']], '#c9-sota': [[0, 'walk'], [.45, 'eat']] }) } })
+    gsap.timeline({ scrollTrigger: { trigger: '.sc-9', start: 'top 70%', end: 'bottom 60%', scrub: .6, onUpdate: s => drive(s, { '#c9-koharu': [[0, 'walk'], [.45, 'stand']], '#c9-sota': [[0, 'walk'], [.45, 'eat']] }) } })
       .from('#c9-koharu', { xPercent: -160, ease: 'none' }, 0).from('#c9-sota', { xPercent: -200, ease: 'none' }, 0)
       .to('.sc-9 .glow', { opacity: 1, ease: 'power2.out', duration: .4, stagger: .08 }, .35);
     if ($('#rt-train')) {
