@@ -1,4 +1,4 @@
-/* たけにし、よりみち日和。— シーン演出（GSAP ScrollTrigger） v3 */
+/* たけにし、よりみち日和。— シーン演出（GSAP ScrollTrigger） v4（モーション層追加） */
 (function () {
   'use strict';
   const $ = (s, r = document) => r.querySelector(s);
@@ -12,6 +12,7 @@
     return;
   }
   gsap.registerPlugin(ScrollTrigger);
+  document.documentElement.classList.add('js-motion');
 
   /* ---------- ローディング（画像の読み込み or 最大2.4秒） ---------- */
   const loader = $('#loader');
@@ -30,14 +31,29 @@
 
   /* ---------- ヘルパー ---------- */
   const poseOf = {};
-  const pose = (sel, name) => {
+  /* ポーズ切替：画像差替＋ぷにっと弾む（squash & stretch）。歩きコマは quiet で弾ませない */
+  const pop = c => { if (c.animate) c.animate([{ scale: '1 1' }, { scale: '1.07 .92', offset: .28 }, { scale: '.97 1.05', offset: .62 }, { scale: '1 1' }], { duration: 420, easing: 'cubic-bezier(.3,.7,.4,1)' }); };
+  const pose = (sel, name, quiet) => {
     const c = $(sel); if (!c || poseOf[sel] === name) return;
     if (!$(sel + ' img[data-pose="' + name + '"]')) return;
-    poseOf[sel] = name;
+    const had = !!poseOf[sel]; poseOf[sel] = name;
     $$('img', c).forEach(i => i.classList.toggle('is-on', i.dataset.pose === name));
+    if (had && !quiet) pop(c);
   };
   const hasPose = (sel, name) => !!$(sel + ' img[data-pose="' + name + '"]');
-  const bub = (sel, on) => { const b = $(sel); if (b) b.classList.toggle('is-on', on); };
+  /* 吹き出し：出るときに1文字ずつタイプ（幅は先に確保してガタつかせない） */
+  const typeIn = (el, text, speed = 42) => {
+    clearInterval(el._t); el.style.minWidth = ''; el.textContent = text;
+    const w = el.offsetWidth; el.style.minWidth = w + 'px'; el.textContent = '';
+    let i = 0; el._t = setInterval(() => { el.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(el._t); }, speed);
+  };
+  const bub = (sel, on) => {
+    const b = $(sel); if (!b) return;
+    const was = b.classList.contains('is-on'); if (was === on) return;
+    if (!b.dataset.full) b.dataset.full = b.textContent;
+    b.classList.toggle('is-on', on);
+    if (on) typeIn(b, b.dataset.full); else { clearInterval(b._t); b.textContent = b.dataset.full; }
+  };
   /* 歩き：walk/walk2 の2コマを交互に切替＋上下ボブ（CSS） */
   const walkers = new Map();
   const walking = (sel, on) => {
@@ -45,8 +61,8 @@
     c.classList.toggle('is-walking', on);
     if (on && !walkers.has(sel)) {
       let f = 0; const two = hasPose(sel, 'walk2');
-      pose(sel, 'walk');
-      walkers.set(sel, setInterval(() => { f ^= 1; pose(sel, two && f ? 'walk2' : 'walk'); }, 230));
+      pose(sel, 'walk', true);
+      walkers.set(sel, setInterval(() => { f ^= 1; pose(sel, two && f ? 'walk2' : 'walk', true); }, 230));
     } else if (!on && walkers.has(sel)) { clearInterval(walkers.get(sel)); walkers.delete(sel); }
   };
   /* 進行率テーブルでポーズ／吹き出しを決める（逆スクロールでも同じ状態になる） */
@@ -63,10 +79,14 @@
   /* 各シーン共通：背景視差＋紙もの出現 */
   $$('.scene').forEach(sc => {
     const bg = $('.scene__bg', sc);
-    if (bg) gsap.fromTo(bg, { yPercent: -4 }, { yPercent: 4, ease: 'none', scrollTrigger: { trigger: sc, start: 'top bottom', end: 'bottom top', scrub: true } });
+    /* 背景：視差＋ゆっくり寄り（Ken Burns） */
+    if (bg) gsap.fromTo(bg, { yPercent: -4, scale: 1.1 }, { yPercent: 4, scale: 1, ease: 'none', scrollTrigger: { trigger: sc, start: 'top bottom', end: 'bottom top', scrub: true } });
+    /* 紙もの：少し傾いて“ぽん”と着地 → 中身が1行ずつ上がる */
     $$('.paper, .board, .note, .mapwrap, .access', sc).forEach(el => {
       if (el.closest('.no-reveal')) return;
-      gsap.from(el, { y: 40, opacity: 0, duration: .9, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 88%' } });
+      const st = { trigger: el, start: 'top 88%' };
+      gsap.from(el, { y: 56, rotate: -2.5, scale: .94, opacity: 0, duration: 1, ease: 'back.out(1.5)', scrollTrigger: st });
+      if (el.classList.contains('paper')) gsap.from(el.children, { y: 16, opacity: 0, duration: .6, ease: 'power3.out', stagger: .07, delay: .18, scrollTrigger: st });
     });
   });
 
@@ -77,6 +97,7 @@
       .from('.sc-1 .kicker-tag', { y: 10, opacity: 0, duration: .5 }, .1)
       .from('.sc-1 .sub, .sc-1 .hero__actions', { y: 14, opacity: 0, duration: .7, stagger: .1 }, .7)
       .from('.sc-1 .hero__fuda', { scale: .6, rotate: -12, opacity: 0, duration: .9, ease: 'back.out(1.6)' }, .9)
+      .to('.sc-1 .title em', { backgroundSize: '100% 100%', duration: .7, ease: 'power2.inOut' }, 1.05)
       .from('#c1-koharu', { xPercent: -220, duration: 1.6, ease: 'power2.out', onStart: () => walking('#c1-koharu', true), onComplete: () => { walking('#c1-koharu', false); pose('#c1-koharu', 'point'); bub('#b1', true); } }, .2)
       .from('#c1-sota', { xPercent: -260, duration: 1.8, ease: 'power2.out', onStart: () => walking('#c1-sota', true), onComplete: () => { walking('#c1-sota', false); pose('#c1-sota', 'jump'); } }, .35);
     const finish = () => { if (intro.progress() < 1) intro.progress(1); };
@@ -157,7 +178,8 @@
       tl.fromTo('#bag', { x: 0, opacity: 0 }, { opacity: 1, x: 24, ease: 'power1.out', duration: .3 }, .3)
         .to('#c6-sota', { y: -14, yoyo: true, repeat: 1, duration: .06 }, .62);
     }
-    tl.from('.sc-6 .paper', { y: 40, opacity: 0, ease: 'none', duration: .25 }, .3);
+    /* スマホは紙が長く、スクロール連動だと上部を見る位置で透明に戻る → 共通の出現演出（一度出たら消えない）に任せる */
+    if (!sp()) tl.from('.sc-6 .paper', { y: 40, opacity: 0, ease: 'none', duration: .25 }, .3);
   }
 
   /* ---- Scene7 帰り道 ---- */
@@ -195,6 +217,55 @@
       .from('.sc-10 .actions', { y: 16, opacity: 0, ease: 'none', duration: .3 }, .7);
   }
 
+  /* ---------- v4 モーション層（空気感・慣性・奥行き） ---------- */
+  /* 待機中の呼吸：キャラごとに位相をずらす */
+  $$('.ch').forEach((c, i) => c.style.setProperty('--bd', (-(i * .83) % 3.2).toFixed(2) + 's'));
+  /* スクロールの速さで、歩いているキャラが前のめり／主要店舗カードがしなる */
+  const root = document.documentElement, lean = { v: 0 };
+  const leanTo = gsap.quickTo(lean, 'v', { duration: .45, ease: 'power3.out', onUpdate: () => root.style.setProperty('--lean', lean.v.toFixed(2) + 'deg') });
+  let leanRest = 0;
+  ScrollTrigger.create({ start: 0, end: 'max', onUpdate: s => {
+    leanTo(gsap.utils.clamp(-8, 8, -s.getVelocity() / 240));
+    clearTimeout(leanRest); leanRest = setTimeout(() => leanTo(0), 140);
+  } });
+  /* 光の粒（昼）／ほたる火（夜）：背景と人物の間にふわふわ漂わせる */
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  $$('.scene').forEach(sc => {
+    if (!$('.scene__bg', sc)) return;
+    const night = sc.classList.contains('sc-10');
+    const box = document.createElement('div'); box.className = 'fx-amb' + (night ? ' fx-amb--fire' : ''); box.setAttribute('aria-hidden', 'true');
+    const n = sp() ? 7 : 14;
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement('i');
+      d.style.cssText = 'left:' + rnd(2, 98).toFixed(1) + '%;top:' + rnd(night ? 30 : 15, 92).toFixed(1) + '%;--s:' + rnd(night ? 5 : 4, night ? 11 : 12).toFixed(1) + 'px;--d:' + rnd(7, 13).toFixed(1) + 's;--dl:-' + rnd(0, 12).toFixed(1) + 's;--dx:' + rnd(-60, 60).toFixed(0) + 'px;--o:' + rnd(.45, .95).toFixed(2);
+      box.appendChild(d);
+    }
+    const ref = $('.scene__fx', sc) || $('.scene__chars', sc); if (ref) ref.parentNode.insertBefore(box, ref); else sc.appendChild(box);
+  });
+  /* オープニング：朝の光だまり＋マウスで奥行き（PCのみ） */
+  const s1 = $('.sc-1');
+  if (s1) {
+    const sun = document.createElement('div'); sun.className = 'fx-sun'; sun.setAttribute('aria-hidden', 'true'); sun.innerHTML = '<i></i>';
+    const ref1 = $('.scene__chars', s1); if (ref1) ref1.parentNode.insertBefore(sun, ref1);
+    if (window.matchMedia('(pointer:fine)').matches) {
+      const bgImg = $('.scene__bg img', s1), chs = $('.scene__chars', s1);
+      gsap.set(bgImg, { scale: 1.05 });
+      const bx = gsap.quickTo(bgImg, 'x', { duration: 1.2, ease: 'power3.out' }), by = gsap.quickTo(bgImg, 'y', { duration: 1.2, ease: 'power3.out' });
+      const cx = gsap.quickTo(chs, 'x', { duration: .9, ease: 'power3.out' });
+      s1.addEventListener('pointermove', e => { const nx = e.clientX / innerWidth - .5, ny = e.clientY / innerHeight - .5; bx(nx * -18); by(ny * -10); cx(nx * 22); });
+      s1.addEventListener('pointerleave', () => { bx(0); by(0); cx(0); });
+    }
+  }
+  /* 主要店舗カード：窓の中で絵が少し遅れて動く（のぞき窓パララックス） */
+  const shopsSc = $('.sc-shops'), cardsImg = $$('.sc-shops .sf img');
+  if (shopsSc && cardsImg.length) {
+    gsap.ticker.add(() => {
+      const R = shopsSc.getBoundingClientRect(); if (R.bottom < 0 || R.top > innerHeight) return;
+      const W = innerWidth;
+      cardsImg.forEach(im => { const r = im.getBoundingClientRect(); const rel = gsap.utils.clamp(-1, 1, (r.left + r.width / 2 - W / 2) / W); im.style.objectPosition = (50 + rel * 35).toFixed(1) + '% 60%'; });
+    });
+  }
+
   /* ---------- ナビゲーター（右下に常駐・シーンごとにひとこと） ---------- */
   const navi = $('#navi');
   if (navi) {
@@ -204,7 +275,7 @@
       clearTimeout(hideT);
       if (p) $$('img', navi).forEach(i => i.classList.toggle('is-on', i.dataset.pose === p));
       if (!t) { tip.classList.remove('is-on'); return; }
-      tip.textContent = t; tip.classList.add('is-on');
+      tip.classList.add('is-on'); typeIn(tip, t, 34);
       navi.classList.add('is-hop'); setTimeout(() => navi.classList.remove('is-hop'), 700);
       hideT = setTimeout(() => tip.classList.remove('is-on'), 5000);
     };
