@@ -43,6 +43,57 @@
       const r = card.getBoundingClientRect();
       if (r.bottom > window.innerHeight) card.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
     };
+    // 店名札の重なり自動回避（v4.1）：札を少し小さくし、上下2段・左右・引き出し線つきの候補から空いている所へ（gのtransformはGSAPと衝突するので触らない）
+    (() => {
+      const NS = 'http://www.w3.org/2000/svg', VB = map.viewBox.baseVal, VW = VB.width, VH = VB.height, LH = 20;
+      const gs = $$('.mshop', map).map(g => {
+        const m = /translate\(\s*([-\d.]+)[\s,]+([-\d.]+)/.exec(g.getAttribute('transform') || '');
+        const r = $('rect.lbl', g), t = $('text', g);
+        if (!(m && r && t)) return null;
+        t.setAttribute('font-size', '11');
+        const w = Math.ceil((t.getComputedTextLength ? t.getComputedTextLength() : t.textContent.length * 11) + 16);
+        return { g, r, t, x: +m[1], y: +m[2], w };
+      }).filter(Boolean).sort((a, b) => a.y - b.y || a.x - b.x);
+      const hit = (a, b, m = 3) => a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.y0 < b.y1 + m && a.y1 > b.y0 - m;
+      const placed = [];
+      $$('#map-station rect, .map-light', map).forEach(r => { const bb = r.getBBox(), tm = r.transform && r.transform.baseVal.consolidate(), ox = tm ? tm.matrix.e : 0, oy = tm ? tm.matrix.f : 0; placed.push({ x0: bb.x + ox, y0: bb.y + oy, x1: bb.x + ox + bb.width, y1: bb.y + oy + bb.height }); });
+      const lg = $('.map-legend', map); if (lg) { const bb = lg.getBBox(); placed.push({ x0: bb.x, y0: bb.y, x1: bb.x + bb.width, y1: bb.y + bb.height }); }
+      const dots = gs.map(s => ({ s, x0: s.x - 8, y0: s.y - 8, x1: s.x + 8, y1: s.y + 8 }));
+      /* 候補：[横位置の種類, 縦位置, 基本コスト] */
+      const cand = [];
+      [[-30, 0], [10, 3]].forEach(([dy, c]) => [0, .45, -.45, .9, -.9].forEach((f, i) => cand.push([f, dy, c + i])));
+      [['R', -LH / 2, 4], ['L', -LH / 2, 4], ['R', -30, 8], ['L', -30, 8], ['R', 10, 9], ['L', 10, 9]].forEach(c => cand.push(c));
+      [-54, 34, -78, 58].forEach((dy, k) => [0, .6, -.6, 1.2, -1.2].forEach((f, i) => cand.push([f, dy, 14 + k * 6 + i])));
+      gs.forEach(s => {
+        let best = null, bestCost = Infinity;
+        cand.forEach(([f, dy, base]) => {
+          let lx = f === 'R' ? 12 : f === 'L' ? -s.w - 12 : -s.w / 2 + f * s.w / 2;
+          lx = Math.min(Math.max(lx, 4 - s.x), VW - 4 - s.x - s.w);
+          const y0 = Math.min(Math.max(s.y + dy, 4), VH - 4 - LH);
+          const box = { x0: s.x + lx, y0, x1: s.x + lx + s.w, y1: y0 + LH };
+          let cost = base;
+          placed.forEach(b => { if (hit(box, b)) cost += 1000; });
+          dots.forEach(d => { if (d.s !== s && hit(box, d, 1)) cost += 300; });
+          if (box.y1 > 280 && box.y0 < 320 && (s.y < 285 || s.y > 315)) cost += 40;   // 中央通りの反対側に札を出さない
+          if (cost < bestCost) { bestCost = cost; best = [lx, y0 - s.y, box]; }
+        });
+        const [lx, dy, box] = best;
+        placed.push(box);
+        s.r.setAttribute('x', lx.toFixed(1)); s.r.setAttribute('y', dy); s.r.setAttribute('width', s.w); s.r.setAttribute('height', LH); s.r.setAttribute('rx', LH / 2);
+        s.t.setAttribute('x', (lx + s.w / 2).toFixed(1)); s.t.setAttribute('y', dy + 14.5);
+        /* 札が点から離れた時は細い線でつなぐ */
+        const cx = Math.min(Math.max(0, lx), lx + s.w), cy = dy + LH / 2;
+        const near = dy === -30 || dy === 10 || dy === -LH / 2;
+        if (!near || Math.abs(lx + s.w / 2) > s.w * .7) {
+          const ln = document.createElementNS(NS, 'line');
+          const ty = dy < 0 ? dy + LH : dy;
+          const tx = Math.min(Math.max(0, lx + 6), lx + s.w - 6);
+          ln.setAttribute('x1', 0); ln.setAttribute('y1', 0);
+          ln.setAttribute('x2', dy === -LH / 2 ? (lx > 0 ? lx : lx + s.w) : tx); ln.setAttribute('y2', dy === -LH / 2 ? cy : ty);
+          ln.setAttribute('class', 'lead'); s.g.insertBefore(ln, s.g.firstChild);
+        }
+      });
+    })();
     $$('.mshop', map).forEach(g => {
       g.addEventListener('click', () => open(g));
       g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(g); } });

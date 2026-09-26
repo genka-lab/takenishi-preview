@@ -190,6 +190,8 @@ h1,h2,h3,h4{font-family:var(--ff-head);line-height:1.35;margin:0;font-weight:900
 .mshop.is-fest .lbl{stroke:var(--yellow);stroke-width:3}
 .mshop:hover .lbl,.mshop:focus .lbl,.mshop.is-active .lbl{fill:var(--red);stroke:var(--red)}
 .mshop:hover text,.mshop:focus text,.mshop.is-active text{fill:#fff}
+.mshop .lead{stroke:#2E6B4A;stroke-width:1.4;opacity:.55}
+.mshop.is-active .lead,.mshop:hover .lead{stroke:var(--red);opacity:1}
 .mshop.is-active .dot{r:10}
 .mapcard{margin-top:14px;background:var(--paper);border-radius:16px;padding:16px 18px;display:none;gap:16px;align-items:center;border:2px dashed var(--line)}
 .mapcard.is-open{display:flex}
